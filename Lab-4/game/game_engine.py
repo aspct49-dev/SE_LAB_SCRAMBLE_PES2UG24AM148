@@ -1,7 +1,10 @@
 import random
 import pygame
 from game.text_box import TextBox
- 
+
+HINT_PENALTY = 0.5    # points deducted per revealed letter
+
+
 class GameEngine:
     def __init__(self, width, height):
         self.width = width
@@ -15,8 +18,11 @@ class GameEngine:
         self.feedback_msg = "Unscramble the letters above!"
         self.feedback_color = (210, 215, 225)
 
-        self.input_box = TextBox(width // 2 - 130, 210, 160, 46)
-        self.submit_btn = pygame.Rect(width // 2 + 45, 210, 95, 46)
+        self.revealed = 0
+
+        self.input_box = TextBox(width // 2 - 175, 220, 160, 46)
+        self.submit_btn = pygame.Rect(width // 2 - 5, 220, 95, 46)
+        self.hint_btn = pygame.Rect(width // 2 + 100, 220, 80, 46)
 
         self.font_title = pygame.font.SysFont(None, 40)
         self.font_word = pygame.font.SysFont(None, 52)
@@ -37,6 +43,7 @@ class GameEngine:
         self.secret_word = random.choice(self.words)
         self.scrambled_word = self.scramble_string(self.secret_word)
         self.input_box.clear()
+        self.revealed = 0
 
     def submit_guess(self):
         guess = self.input_box.text.strip().upper()
@@ -58,6 +65,22 @@ class GameEngine:
             self.feedback_color = (240, 80, 80)
             self.input_box.clear()
 
+    # ------------------------------------------------------------------ hints
+    def use_hint(self):
+        # Never reveal the whole word; the last letter is left for the player.
+        if self.revealed >= len(self.secret_word) - 1:
+            self.feedback_msg = "No more hints for this word!"
+            self.feedback_color = (240, 170, 50)
+            return
+        self.revealed += 1
+        self.score -= HINT_PENALTY
+        self.feedback_msg = f"Hint used: -{HINT_PENALTY:g} points"
+        self.feedback_color = (240, 170, 50)
+
+    def hint_pattern(self):
+        return " ".join(ch if i < self.revealed else "_" for i, ch in enumerate(self.secret_word))
+
+    # ------------------------------------------------------------------ loop
     def handle_event(self, event):
         self.input_box.handle_event(event)
 
@@ -66,11 +89,19 @@ class GameEngine:
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.submit_btn.collidepoint(event.pos):
                 self.submit_guess()
-                # Clicking a button shouldn't steal focus from the only text box.
-                self.input_box.active = True
+            elif self.hint_btn.collidepoint(event.pos):
+                self.use_hint()
+            # The text box is the only input, so clicks elsewhere shouldn't steal its focus.
+            self.input_box.active = True
 
     def update(self):
         pass
+
+    def draw_button(self, screen, rect, label, color):
+        pygame.draw.rect(screen, color, rect, border_radius=6)
+        pygame.draw.rect(screen, (220, 220, 220), rect, width=2, border_radius=6)
+        text = self.font_btn.render(label, True, (255, 255, 255))
+        screen.blit(text, (rect.centerx - text.get_width() // 2, rect.centery - text.get_height() // 2))
 
     def render(self, screen):
         screen.fill((26, 30, 38))
@@ -78,19 +109,19 @@ class GameEngine:
         title_surf = self.font_title.render("Word Scramble Arena", True, (245, 245, 245))
         screen.blit(title_surf, (self.width // 2 - title_surf.get_width() // 2, 25))
 
-        score_surf = self.font_msg.render(f"Score: {self.score}", True, (255, 220, 80))
+        score_surf = self.font_msg.render(f"Score: {self.score:g}", True, (255, 220, 80))
         screen.blit(score_surf, (self.width // 2 - score_surf.get_width() // 2, 70))
 
         spaced_letters = "  ".join(self.scrambled_word)
         scramble_surf = self.font_word.render(spaced_letters, True, (100, 200, 255))
-        screen.blit(scramble_surf, (self.width // 2 - scramble_surf.get_width() // 2, 130))
+        screen.blit(scramble_surf, (self.width // 2 - scramble_surf.get_width() // 2, 120))
+
+        hint_surf = self.font_msg.render(f"Hint:  {self.hint_pattern()}", True, (100, 200, 255))
+        screen.blit(hint_surf, (self.width // 2 - hint_surf.get_width() // 2, 178))
 
         self.input_box.render(screen)
-
-        pygame.draw.rect(screen, (50, 150, 85), self.submit_btn, border_radius=6)
-        pygame.draw.rect(screen, (220, 220, 220), self.submit_btn, width=2, border_radius=6)
-        btn_text = self.font_btn.render("SUBMIT", True, (255, 255, 255))
-        screen.blit(btn_text, (self.submit_btn.centerx - btn_text.get_width() // 2, self.submit_btn.centery - btn_text.get_height() // 2))
+        self.draw_button(screen, self.submit_btn, "SUBMIT", (50, 150, 85))
+        self.draw_button(screen, self.hint_btn, "HINT", (180, 120, 40))
 
         feedback_surf = self.font_msg.render(self.feedback_msg, True, self.feedback_color)
-        screen.blit(feedback_surf, (self.width // 2 - feedback_surf.get_width() // 2, 285))
+        screen.blit(feedback_surf, (self.width // 2 - feedback_surf.get_width() // 2, 290))
