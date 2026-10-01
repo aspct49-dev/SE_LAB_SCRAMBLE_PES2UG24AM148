@@ -54,7 +54,8 @@ class GameEngine:
                 return shuffled
 
     def next_round(self):
-        self.secret_word = random.choice(self.words)
+        # Don't serve the same word twice in a row.
+        self.secret_word = random.choice([w for w in self.words if w != self.secret_word])
         self.scrambled_word = self.scramble_string(self.secret_word)
         self.input_box.clear()
         self.time_left = self.round_time
