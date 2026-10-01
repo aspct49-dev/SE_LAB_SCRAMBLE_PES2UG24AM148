@@ -8,7 +8,7 @@ FPS = 60
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Anvil Dodge - Pygame Edition")
+    pygame.display.set_caption("Word Scramble Arena")
     clock = pygame.time.Clock()
 
     engine = GameEngine(WIDTH, HEIGHT)
