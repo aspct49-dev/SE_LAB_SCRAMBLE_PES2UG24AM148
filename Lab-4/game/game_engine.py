@@ -66,6 +66,8 @@ class GameEngine:
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.submit_btn.collidepoint(event.pos):
                 self.submit_guess()
+                # Clicking a button shouldn't steal focus from the only text box.
+                self.input_box.active = True
 
     def update(self):
         pass
